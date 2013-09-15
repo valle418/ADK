@@ -89,8 +89,6 @@ public class Konkordans{
 					j= m;
 				}
 			}
-			System.out.println(i);
-			System.out.println(j);
 			// when the distance between j and i (the range) is lesser than
 			// 1000, place read in file at the i-position 
 			reader.seek(i);
@@ -127,7 +125,6 @@ public class Konkordans{
 		if(word.length()> 3){
 			word = word.substring(0,3);
 		}
-		System.out.println(word);
 		if(index.containsKey(word)){
 			in[0] = index.get(word);
 			word = incremented(word);
@@ -139,12 +136,8 @@ public class Konkordans{
 				word = incremented(word);
 			}
 			in[1] = index.get(word);
-			System.out.println(word);
-			System.out.println(in[0]);
-			System.out.println(in[1]);
 			return in;
 		}
-		System.out.println(file);
 		return in;
 
 	};
