@@ -25,6 +25,7 @@ public class Konkordans{
 		long[] in = {0,0};
 		// check to see that the user has provided arguments
 		if(args.length>0){
+			args[0] = args[0].toLowerCase();
 			// get the range of the indexes
 			in = app.getRange(file, index, args[0]);	
 			// create Linkedlist for the word positions
@@ -33,7 +34,7 @@ public class Konkordans{
 			System.out.println("Det finns "+ x.size() + " förekomster av ordet.");
 			// if the number of words in the text is more than 25, ask the user 
 			// if the word in the sentence should be printed.
-			if(x.size()>200){
+			if(x.size()>100000){
 				System.out.println("Vill du skriva ut alla förekomster?");
 			}
 			// if the number of words in the text is less than 25, but more than 0
@@ -88,16 +89,20 @@ public class Konkordans{
 					j= m;
 				}
 			}
+			System.out.println(i);
+			System.out.println(j);
 			// when the distance between j and i (the range) is lesser than
 			// 1000, place read in file at the i-position 
 			reader.seek(i);
+			// read one line first, in case i-pos is in the middle of a line
+			s = reader.readLine();
 			// Keep going until you find word, or you find a word which is
 			// greater than the one you are looking for
 			while (true){
-				// read one line first, in case i-pos is in the middle of a line
-				s = reader.readLine();
 				s = reader.readLine();
 				parts = s.split(" ");
+				parts[0] = parts[0].replace("/[,;.]$/","");
+				System.out.println(parts[0]);
 				if (parts[0].equals(word)){
 					int z= 0;
 					while (parts[0].equals(word)){
@@ -122,14 +127,21 @@ public class Konkordans{
 		if(word.length()> 3){
 			word = word.substring(0,3);
 		}
-		word = incremented(word);
+		System.out.println(word);
 		if(index.containsKey(word)){
 			in[0] = index.get(word);
 			word = incremented(word);
 			while(!(index.containsKey(word))){
 				word = incremented(word);
 			}
+			word = incremented(word);
+			while(!(index.containsKey(word))){
+				word = incremented(word);
+			}
 			in[1] = index.get(word);
+			System.out.println(word);
+			System.out.println(in[0]);
+			System.out.println(in[1]);
 			return in;
 		}
 		System.out.println(file);
