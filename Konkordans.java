@@ -3,33 +3,53 @@ import java.io.*;
 public class Konkordans{
 	
 	public static void main(String[] args) {
+		// Initiating konkordans object
 		Konkordans app = new Konkordans();
+		// names of files used
 		String file = "ut.txt";
 		String aIndex = "aIndex.txt";
 		String txtFile = "korpus.txt";
 
+		// create hashtable for index
 		Hashtable<String, Long> index = new Hashtable<String, Long>();
-		if(new File(aIndex).isFile()){
+		
+		// if index has been written to file, read it from file
+		if(new File(aIndex).isFile()){	
 			index = app.readIndexFromFile(aIndex);
+		// otherwise, create index and write it to file
 		}else{
 			index = app.createIndex(file, index);
 			app.indexToFile(index, aIndex);
 		}
+		// list for range of indexes in "ut.txt"
 		long[] in = {0,0};
+		// check to see that the user has provided arguments
 		if(args.length>0){
-			in = app.runSeek(file, index, args[0]);	
-			LinkedList<Long> x = app.findWords(args[0],file, in);
+			// get the range of the indexes
+			in = app.getRange(file, index, args[0]);	
+			// create Linkedlist for the word positions
+			LinkedList<Long> x = app.findWordPositions(args[0],file, in);
+			// Print number of words in text
 			System.out.println("Det finns "+ x.size() + " förekomster av ordet.");
-			if(x.size()>25){
+			// if the number of words in the text is more than 25, ask the user 
+			// if the word in the sentence should be printed.
+			if(x.size()>200){
 				System.out.println("Vill du skriva ut alla förekomster?");
-			}else if (x.size()> 0){
+			}
+			// if the number of words in the text is less than 25, but more than 0
+			// print the word with sentence
+			else if (x.size()> 0){
 				app.writeSentences(x, txtFile);
 			}
 		};
 		
 	};
-
-	public LinkedList<Long> findWords(String word, String file, long[] in){
+	/* Find all the positions of the word that you are looking for from a indexfile
+	* Parameters: word you are looking for, indexfile-name, array with two long 
+	* numbers as the range in which look for the word
+	* Returns: a LinkedList of all the positions where the word exists stored as long numbers*/
+	public LinkedList<Long> findWordPositions(String word, String file, long[] in){
+		// Create local varibles
 		int i = (int)in[0];
 		int j = (int)in[1];
 		int m = 0;
@@ -38,21 +58,43 @@ public class Konkordans{
 		char c;
 		String parts[];
 		try {
+			// Open file as randomaccessfile with read access
 			RandomAccessFile reader = new RandomAccessFile(file, "r");
+			// While the range to look in is longer than 1000
 			while ((j-i)>1000){
+				// give m a value in the middle of j and i
 				m = ((i+j)/2);
+				// positions read in file at m-position
 				reader.seek(m);
+				// read one line first, in case m is in the middle of a line
 				s = reader.readLine();
+				// read next line, guaranteed a full line
 				s = reader.readLine();
+				// Split line at space and store in an array
+				// first part is a word, second is the position 
+				// of the word in the textfile.
 				parts = s.split(" ");
+				// If the word you are looking for ís greater than
+				// the word in the array
 				if(word.compareTo(parts[0])>0){
+					// put i as m (we want to look in the half which 
+					// is between j and m)
 					i = m;
+				// Else if the word you are looking for ís lesser than
+				// the word in the array
 				}else{
+					// put j as m (we want to look in the half which 
+					// is between i and m)
 					j= m;
 				}
 			}
+			// when the distance between j and i (the range) is lesser than
+			// 1000, place read in file at the i-position 
 			reader.seek(i);
+			// Keep going until you find word, or you find a word which is
+			// greater than the one you are looking for
 			while (true){
+				// read one line first, in case i-pos is in the middle of a line
 				s = reader.readLine();
 				s = reader.readLine();
 				parts = s.split(" ");
@@ -75,14 +117,19 @@ public class Konkordans{
 		return x;
 	}
 
-	public long[] runSeek(String file, Hashtable<String, Long> index, String word){
+	public long[] getRange(String file, Hashtable<String, Long> index, String word){
 		long[] in = {0,0};
 		if(word.length()> 3){
 			word = word.substring(0,3);
 		}
+		word = incremented(word);
 		if(index.containsKey(word)){
-			in[0] = index.get(incremented(word));
-			in[1] = index.get(incremented(incremented(word)));
+			in[0] = index.get(word);
+			word = incremented(word);
+			while(!(index.containsKey(word))){
+				word = incremented(word);
+			}
+			in[1] = index.get(word);
 			return in;
 		}
 		System.out.println(file);
