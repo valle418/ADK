@@ -36,13 +36,13 @@ public class Konkordans{
 			// if the word in the sentence should be printed.
 			if(x.size()>25){
 				if(app.askUser("Vill du skriva ut alla förekomster? \nJ(Ja) or N(Nej)")){
-					app.writeSentences(x, txtFile);
+					app.writeSentences(x, txtFile, args[0].length());
 				}
 			}
 			// if the number of words in the text is less than 25, but more than 0
 			// print the word with sentence
 			else if (x.size()> 0){
-				app.writeSentences(x, txtFile);
+				app.writeSentences(x, txtFile, args[0].length());
 			}
 		};
 		
@@ -226,14 +226,14 @@ public class Konkordans{
 		return index;
 	}
 
-	public void writeSentences(LinkedList<Long> list, String file){
-		byte[] b = new byte[60];
+	public void writeSentences(LinkedList<Long> list, String file, int wordLength){
+		byte[] b = new byte[(60 + wordLength)];
 		int size = list.size();
 		try{
 			RandomAccessFile reader = new RandomAccessFile(file, "r");
 			for(int j = 0; j<size; j++){
 				reader.seek((list.removeFirst()-30));
-				for(int i = 0; i < 60; i++){
+				for(int i = 0; i < (60+ wordLength); i++){
 					b[i]= reader.readByte();
 				}
 				String s = new String(b, "ISO-8859-1");
