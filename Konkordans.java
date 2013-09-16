@@ -34,8 +34,10 @@ public class Konkordans{
 			System.out.println("Det finns "+ x.size() + " förekomster av ordet.");
 			// if the number of words in the text is more than 25, ask the user 
 			// if the word in the sentence should be printed.
-			if(x.size()>100000){
-				System.out.println("Vill du skriva ut alla förekomster?");
+			if(x.size()>25){
+				if(app.askUser("Vill du skriva ut alla förekomster?")){
+					app.writeSentences(x, txtFile);
+				}
 			}
 			// if the number of words in the text is less than 25, but more than 0
 			// print the word with sentence
@@ -100,7 +102,6 @@ public class Konkordans{
 				s = reader.readLine();
 				parts = s.split(" ");
 				parts[0] = parts[0].replace("/[,;.]$/","");
-				System.out.println(parts[0]);
 				if (parts[0].equals(word)){
 					int z= 0;
 					while (parts[0].equals(word)){
@@ -125,6 +126,8 @@ public class Konkordans{
 		if(word.length()> 3){
 			word = word.substring(0,3);
 		}
+		System.out.println("Checking if i is a key in index");
+		System.out.println(index.get("i"));
 		if(index.containsKey(word)){
 			in[0] = index.get(word);
 			word = incremented(word);
@@ -161,6 +164,9 @@ public class Konkordans{
         				continue;
         			}
         			index.put(sub, pointer);
+        			if(sub.equals("i")){
+        				System.out.println("i is found at " + index.get("i"));
+        			}
         			pointer = reader.getFilePointer();
     			};
     		reader.close();
@@ -191,10 +197,13 @@ public class Konkordans{
 	public void indexToFile(Hashtable<String, Long>index, String file){
 		Enumeration<String> keys = index.keys();
 		try{
-			PrintWriter writer = new PrintWriter(file, "ISO-8859-1");
+			RandomAccessFile writer = new RandomAccessFile(file, "rw");
 		while (keys.hasMoreElements()){
 			String key = keys.nextElement();
-			writer.println(key + " " + index.get(key));
+			if(key.equals("i")){
+        				System.out.println("i is found at " + index.get(key));
+        			}
+			writer.writeBytes(key + " " + index.get(key)+ "\n");
 		}
 
 		}catch(IOException x){
@@ -206,13 +215,16 @@ public class Konkordans{
 		Hashtable<String, Long> index = new Hashtable<String, Long>();
 		String line = null;
 		String[] parts = {" ", " "};
-		long l = 0;
+		long l;
 		String s = "";
 		try{
 			RandomAccessFile reader = new RandomAccessFile(file, "r");
 			while ((line = reader.readLine()) != null) {
         			parts = line.split(" ");
         			s = parts[0];
+        			if(s.equals("i")){
+        				System.out.println("found i at " + parts[1]);
+        			}
         			l = Long.parseLong(parts[1]);
         			index.put(s, l);
 			}
