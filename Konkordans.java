@@ -35,7 +35,7 @@ public class Konkordans{
 			// if the number of words in the text is more than 25, ask the user 
 			// if the word in the sentence should be printed.
 			if(x.size()>25){
-				if(app.askUser("Vill du skriva ut alla förekomster?")){
+				if(app.askUser("Vill du skriva ut alla förekomster? \nJ(Ja) or N(Nej)")){
 					app.writeSentences(x, txtFile);
 				}
 			}
@@ -126,8 +126,6 @@ public class Konkordans{
 		if(word.length()> 3){
 			word = word.substring(0,3);
 		}
-		System.out.println("Checking if i is a key in index");
-		System.out.println(index.get("i"));
 		if(index.containsKey(word)){
 			in[0] = index.get(word);
 			word = incremented(word);
@@ -164,9 +162,6 @@ public class Konkordans{
         				continue;
         			}
         			index.put(sub, pointer);
-        			if(sub.equals("i")){
-        				System.out.println("i is found at " + index.get("i"));
-        			}
         			pointer = reader.getFilePointer();
     			};
     		reader.close();
@@ -200,9 +195,6 @@ public class Konkordans{
 			RandomAccessFile writer = new RandomAccessFile(file, "rw");
 		while (keys.hasMoreElements()){
 			String key = keys.nextElement();
-			if(key.equals("i")){
-        				System.out.println("i is found at " + index.get(key));
-        			}
 			writer.writeBytes(key + " " + index.get(key)+ "\n");
 		}
 
@@ -222,9 +214,6 @@ public class Konkordans{
 			while ((line = reader.readLine()) != null) {
         			parts = line.split(" ");
         			s = parts[0];
-        			if(s.equals("i")){
-        				System.out.println("found i at " + parts[1]);
-        			}
         			l = Long.parseLong(parts[1]);
         			index.put(s, l);
 			}
@@ -252,5 +241,19 @@ public class Konkordans{
 			System.err.println(x);
 		}
 
+	}
+
+	public boolean askUser(String question){
+		Scanner sc = new Scanner(System.in);
+		System.out.println(question);
+		String response = sc.nextLine();
+		if(response.toLowerCase().equals("j")){
+			return true;
+		}
+		else if (response.toLowerCase().equals("n")){
+			return false;
+		}else{
+			return askUser(question);
+		}
 	}
 }
