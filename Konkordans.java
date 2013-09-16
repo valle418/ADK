@@ -110,8 +110,10 @@ public class Konkordans{
 						parts = s.split(" ");
 						z++;
 					}
+					reader.close();
 					return x;
 				}if(s.compareTo(word)>0){
+					reader.close();
 					return x;
 				}
 			}
@@ -193,11 +195,11 @@ public class Konkordans{
 		Enumeration<String> keys = index.keys();
 		try{
 			RandomAccessFile writer = new RandomAccessFile(file, "rw");
-		while (keys.hasMoreElements()){
-			String key = keys.nextElement();
-			writer.writeBytes(key + " " + index.get(key)+ "\n");
-		}
-
+			while (keys.hasMoreElements()){
+				String key = keys.nextElement();
+				writer.writeBytes(key + " " + index.get(key)+ "\n");
+			}
+		writer.close();
 		}catch(IOException x){
 			System.err.println(x);
 		}
@@ -217,6 +219,7 @@ public class Konkordans{
         			l = Long.parseLong(parts[1]);
         			index.put(s, l);
 			}
+		reader.close();
 		}catch(IOException x){
 			System.err.println(x);
 		}
@@ -237,6 +240,7 @@ public class Konkordans{
 				s = s.replaceAll("(\\n)", " ");
 				System.out.println(s);
 			}
+		reader.close();
 		}catch(IOException x){
 			System.err.println(x);
 		}
@@ -247,6 +251,7 @@ public class Konkordans{
 		Scanner sc = new Scanner(System.in);
 		System.out.println(question);
 		String response = sc.nextLine();
+		sc.close();
 		if(response.toLowerCase().equals("j")){
 			return true;
 		}
