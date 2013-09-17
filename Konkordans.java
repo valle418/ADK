@@ -14,19 +14,23 @@ public class Konkordans{
 		// Initiating konkordans object
 		Konkordans app = new Konkordans();
 		// The files used
-		String tokenizerOutput = "/var/tmp/ut.txt";
-		String aIndexFile = "aIndex.txt";
-		String korpus = "/info/adk13/labb1/korpus";
+		String tokenizerOutput = "ut.txt";
+		String wordAndIndexFile = "aIndex.txt";
+		String onlyIndexFile = "bIndex.txt";
+		String firstThreeIndexFile = "massaIndex.txt";
+		String korpus = "korpus.txt";
 
 		// create a hashtable for the a-index
-		Hashtable<String, Long> aIndex = new Hashtable<String, Long>();
+		TreeMap<String, LinkedList<Long>> indexList = new TreeMap<String, LinkedList<Long>>();
+		Hashtable<String, Long> firstThreeIndex = new Hashtable<String, Long>();
 		// if the index has previously been written to a file, create a hashtable from it
-		if(new File(aIndexFile).isFile()){	
-			aIndex = app.readIndexFromFile(aIndexFile);
-		// if not, create the index and save it to the file aIndexFile
+		if(new File(wordAndIndexFile).isFile()){	
+			firstThreeIndex = app.readIndexFromFile(firstThreeIndexFile);
+		// if not, create the index and save it to the file wordAndIndexFile
 		}else{
-			aIndex = app.createAIndex(tokenizerOutput);
-			app.indexToFile(aIndex, aIndexFile);
+			indexList = app.createIndex(tokenizerOutput);
+			firstThreeIndex = app.indexToFile(indexList, wordAndIndexFile, onlyIndexFile);
+			app.firstThreeIndexToFile(firstThreeIndex, firstThreeIndexFile);
 		}
 		// initilize a list to contain where to start and stop the to be search
 		long[] in = {0,0};
@@ -34,9 +38,9 @@ public class Konkordans{
 		if(args.length>0){
 			args[0] = args[0].toLowerCase();
 			// get the start- and stop-indexes to be searched
-			in = app.getRange(aIndex, args[0]);	
-			// create Linkedlist for the word positions
-			LinkedList<Long> x = app.findWordPositions(args[0],tokenizerOutput, in);
+			in = app.getRange(firstThreeIndex, args[0]);	
+			// create LinkedList for the word positions
+			LinkedList<Long> x = app.findWordPositions(args[0], wordAndIndexFile, onlyIndexFile, in);
 			// Print number of words in text
 			System.out.println("Det finns "+ x.size() + " förekomster av ordet.");
 			// if the number of words in the text is more than 25, ask the user 
@@ -59,7 +63,7 @@ public class Konkordans{
 	* numbers as the range in which look for the word
 	* Returns: a LinkedList of all the positions where the word exists stored as long numbers
 	*/
-	public LinkedList<Long> findWordPositions(String word, String tokenizerOutput, long[] in){
+	public LinkedList<Long> findWordPositions(String word, String wordAndIndexFile, String onlyIndexFile, long[] in){
 		// Create local varibles
 		int i = (int)in[0];
 		int j = (int)in[1];
@@ -70,17 +74,18 @@ public class Konkordans{
 		String parts[];
 		try {
 			// Open tokenizerOutput as randomaccessfile with read access
-			RandomAccessFile reader = new RandomAccessFile(tokenizerOutput, "r");
+			RandomAccessFile readerA = new RandomAccessFile(wordAndIndexFile, "r");
+			RandomAccessFile readerB = new RandomAccessFile(onlyIndexFile, "r");
 			// While the range to look in is longer than 1000
 			while ((j-i)>1000){
 				// give m a value in the middle of j and i
 				m = ((i+j)/2);
 				// positions read in file at m-position
-				reader.seek(m);
+				readerA.seek(m);
 				// read one line first, in case m is in the middle of a line
-				s = reader.readLine();
+				s = readerA.readLine();
 				// read next line, guaranteed a full line
-				s = reader.readLine();
+				s = readerA.readLine();
 				// Split line at space and store in an array
 				// first part is a word, second is the position 
 				// of the word in the textfile.
@@ -101,27 +106,39 @@ public class Konkordans{
 			}
 			// when the distance between j and i (the range) is lesser than
 			// 1000, place read in file at the i-position 
-			reader.seek(i);
+			readerA.seek(i);
 			// read one line first, in case i-pos is in the middle of a line
-			s = reader.readLine();
 			// Keep going until you find word, or you find a word which is
 			// greater than the one you are looking for
 			while (true){
-				s = reader.readLine();
+				// read line from A-file
+				s = readerA.readLine();
+				// splitLine at space
 				parts = s.split(" ");
-				parts[0] = parts[0].replace("/[,;.]$/","");
+				// if the word is the one you are looking for
 				if (parts[0].equals(word)){
-					int z= 0;
-					while (parts[0].equals(word)){
-						x.add(Long.parseLong(parts[1]));
-						s = reader.readLine();
-						parts = s.split(" ");
-						z++;
+					// set pointer as second element in list
+					long pointer = Long.parseLong(parts[1]);
+					// set readerB to the position given by pointer
+					readerB.seek(pointer);
+					// set string t as the value at line in file
+					String t = readerB.readLine();
+					// split t at space
+					String[] party = t.split(" ");
+					Long lon;
+
+					for(int y = 0; y<party.length; y++){
+						lon = Long.parseLong(party[y]);
+						x.addFirst(lon);
 					}
-					reader.close();
+					// close readers
+					readerA.close();
+					readerB.close();
 					return x;
 				}if(s.compareTo(word)>0){
-					reader.close();
+					// close readers
+					readerB.close();
+					readerB.close();
 					return x;
 				}
 			}
@@ -143,7 +160,7 @@ public class Konkordans{
 	* the word we are getting the range for
 	* @return the range as a list of 2 longs containing start- and stop-index
 	*/
-	public long[] getRange(Hashtable<String, Long> aIndex, String word){
+	public long[] getRange(Hashtable<String, Long> firstThreeIndex, String word){
 		long[] in = {0,0};
 		
 		//Get the first 3 letters of the word:
@@ -151,15 +168,14 @@ public class Konkordans{
 			word = word.substring(0,3);
 		}
 		// Get the index corresponding to the correct 3-letter combination
-		if(aIndex.containsKey(word)){
-			in[0] = aIndex.get(word);
+		if(firstThreeIndex.containsKey(word)){
+			in[0] = firstThreeIndex.get(word);
 			//Use incremented to find the next available 3-letter combination
 			word = incremented(word);
-			while(!(aIndex.containsKey(word))){
+			while(!(firstThreeIndex.containsKey(word))){
 				word = incremented(word);
 			}
-
-			in[1] = aIndex.get(word);
+			in[1] = firstThreeIndex.get(word);
 			return in;
 		}
 		return in;
@@ -178,32 +194,30 @@ public class Konkordans{
 	* A hashtable containing each 3-letter (or fewer) combination exsisting in the file 
 	* and an index to where in the input-file the first word begining with it is. 
 	*/
-	public Hashtable<String, Long> createAIndex(String file){
-		Hashtable<String, Long> aIndex = new Hashtable<String, Long>();
+	public TreeMap<String, LinkedList<Long>> createIndex(String tokenizerOutput){
+		TreeMap<String, LinkedList<Long>> indexList = new TreeMap<String, LinkedList<Long>>();
 		try {
-			RandomAccessFile reader = new RandomAccessFile(file, "r");
+			RandomAccessFile reader = new RandomAccessFile(tokenizerOutput, "r");
 			String line = null;
 			String[] parts;
 			long pointer = reader.getFilePointer();
     			while ((line = reader.readLine()) != null) {
         			parts = line.split(" ");
-        			String sub;
-        			if (parts[0].length() < 3){
-        				sub = parts[0];
-        			}else{
-        				sub = parts[0].substring(0, 3);
-        			}
-        			if (aIndex.containsKey(sub)){
-        				continue;
-        			}
-        			aIndex.put(sub, pointer);
-        			pointer = reader.getFilePointer();
+        			String word = parts[0];
+     				if(indexList.containsKey(word)){
+     					indexList.get(word).addLast(Long.parseLong(parts[1]));
+     				}
+     				else{
+     					LinkedList<Long> list = new LinkedList<Long>();
+     					list.addFirst(Long.parseLong(parts[1]));
+      					indexList.put(word, list);
+     				}
     			};
     		reader.close();
 		} catch (IOException x) {
     	System.err.println(x);
 		}
-		return aIndex;
+		return indexList;
 	}
 
 	/**
@@ -240,18 +254,61 @@ public class Konkordans{
 	* @param file
 	* file we wish to write to
 	*/
-	public void indexToFile(Hashtable<String, Long>index, String file){
-		Enumeration<String> keys = index.keys();
+	public Hashtable<String, Long> indexToFile(TreeMap<String, LinkedList<Long>> index, String wordAndIndexFile, String onlyIndexfile){
+		// An iterator over all the keys, all the words, in the treemap.
+		Iterator<String> keys = index.descendingKeySet().descendingIterator();
+		// A hashtable for the word and the position of that word's indexes in an other file.  
+		Hashtable<String, Long> firstThreeIndex = new Hashtable<String, Long>();
+		
+		Iterator<Long> indexList;;
+		String key;
+		String sub;
+		Long pointerToB;
+		Long pointerToA;
 		try{
-			RandomAccessFile writer = new RandomAccessFile(file, "rw");
-			while (keys.hasMoreElements()){
-				String key = keys.nextElement();
-				writer.writeBytes(key + " " + index.get(key)+ "\n");
+			// Two writers for two files
+			RandomAccessFile writerOne = new RandomAccessFile(wordAndIndexFile, "rw");
+			RandomAccessFile writerTwo = new RandomAccessFile(onlyIndexfile, "rw");
+			// While there are more words in the treemap
+			while (keys.hasNext()){
+				// set key variable to next element in the iterator
+				key = keys.next();
+				// // Iterator over all indexes for the word in key
+				indexList = index.get(key).descendingIterator();
+				// get fileposition in the onlyindexes file
+				pointerToB = writerTwo.getFilePointer();
+				// while there are indexes left in the list
+				while(indexList.hasNext()){
+					// write the index to the onlyindexfile with a space
+					writerTwo.writeBytes(indexList.next() + " ");
+				}
+				// end writing with a newline
+				writerTwo.writeBytes("\n");
+				// set pointerToA as the position in the A-file
+				pointerToA = writerOne.getFilePointer();
+				// Write the word, space and pointerToB to wordAndIndexFile
+				writerOne.writeBytes(key + " " + pointerToB +  "\n");
+				// if the length of the word is less than 3
+				if (key.length() < 3){
+					// set the string sub to the word
+        			sub = key;
+        		// if the length of the word is 3 or more
+        		}else{
+        			// set sub to the first three letters ín the word
+  	     			sub = key.substring(0, 3);
+       			}
+       			// if the firstThreeIndex already contains sub, continue
+       			if (!(firstThreeIndex.containsKey(sub))){
+       				firstThreeIndex.put(sub, pointerToA);
+				}
 			}
-		writer.close();
-		}catch(IOException x){
+		writerOne.close();
+		writerTwo.close();
+		return firstThreeIndex;
+		}catch(IOException x){ 
 			System.err.println(x);
 		}
+		return firstThreeIndex;
 	}
 
 	/**
@@ -271,10 +328,12 @@ public class Konkordans{
 		try{
 			RandomAccessFile reader = new RandomAccessFile(file, "r");
 			while ((line = reader.readLine()) != null) {
-        			parts = line.split(" ");
-        			s = parts[0];
-        			l = Long.parseLong(parts[1]);
-        			index.put(s, l);
+        		parts = line.split(" ");
+        		if(parts.length == 2){
+       				s = parts[0];
+       				l = Long.parseLong(parts[1]);
+       				index.put(s, l);
+       			}	
 			}
 		reader.close();
 		}catch(IOException x){
@@ -296,11 +355,13 @@ public class Konkordans{
 	public void writeSentences(LinkedList<Long> list, String file, int wordLength){
 		byte[] b = new byte[(60 + wordLength)];
 		int size = list.size();
+		long l;
 		try{
 			RandomAccessFile reader = new RandomAccessFile(file, "r");
 			for(int j = 0; j<size; j++){
-				reader.seek((list.removeFirst()-30));
-				for(int i = 0; i < (60+ wordLength); i++){
+				l= list.removeLast();
+				reader.seek((l-30));
+				for(int i = 0; i < (wordLength+60); i++){
 					b[i]= reader.readByte();
 				}
 				String s = new String(b, "ISO-8859-1");
@@ -335,4 +396,19 @@ public class Konkordans{
 			return askUser(question);
 		}
 	}
+
+	public void firstThreeIndexToFile(Hashtable<String, Long>index, String file){
+		Enumeration<String> keys = index.keys();
+		try{
+			RandomAccessFile writer = new RandomAccessFile(file, "rw");
+			while (keys.hasMoreElements()){
+				String key = keys.nextElement();
+				writer.writeBytes(key + " " + index.get(key)+ "\n");
+			}
+		writer.close();
+		}catch(IOException x){
+			System.err.println(x);
+		}
+	}
+	
 }
