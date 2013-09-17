@@ -25,7 +25,7 @@ public class Konkordans{
 			aIndex = app.readIndexFromFile(aIndexFile);
 		// if not, create the index and save it to the file aIndexFile
 		}else{
-			aIndex = app.createAIndex(tokenizerOutput, aIndex);
+			aIndex = app.createAIndex(tokenizerOutput);
 			app.indexToFile(aIndex, aIndexFile);
 		}
 		// initilize a list to contain where to start and stop the to be search
@@ -34,7 +34,7 @@ public class Konkordans{
 		if(args.length>0){
 			args[0] = args[0].toLowerCase();
 			// get the start- and stop-indexes to be searched
-			in = app.getRange(tokenizerOutput, aIndex, args[0]);	
+			in = app.getRange(aIndex, args[0]);	
 			// create Linkedlist for the word positions
 			LinkedList<Long> x = app.findWordPositions(args[0],tokenizerOutput, in);
 			// Print number of words in text
@@ -143,7 +143,7 @@ public class Konkordans{
 	* the word we are getting the range for
 	* @return the range as a list of 2 longs containing start- and stop-index
 	*/
-	public long[] getRange(String file, Hashtable<String, Long> aIndex, String word){
+	public long[] getRange(Hashtable<String, Long> aIndex, String word){
 		long[] in = {0,0};
 		
 		//Get the first 3 letters of the word:
@@ -178,7 +178,8 @@ public class Konkordans{
 	* A hashtable containing each 3-letter (or fewer) combination exsisting in the file 
 	* and an index to where in the input-file the first word begining with it is. 
 	*/
-	public Hashtable<String, Long> createAIndex(String file, Hashtable<String, Long> aIndex){
+	public Hashtable<String, Long> createAIndex(String file){
+		Hashtable<String, Long> aIndex = new Hashtable<String, Long>();
 		try {
 			RandomAccessFile reader = new RandomAccessFile(file, "r");
 			String line = null;
