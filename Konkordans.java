@@ -18,7 +18,8 @@ public class Konkordans{
 		String wordAndIndexFile = "aIndex.txt";
 		String onlyIndexFile = "bIndex.txt";
 		String firstThreeIndexFile = "massaIndex.txt";
-		String korpus = "korpus.txt";
+		String korpus = "korpus";
+		
 
 		// create a hashtable for the a-index
 		TreeMap<String, LinkedList<Long>> indexList = new TreeMap<String, LinkedList<Long>>();
@@ -40,12 +41,12 @@ public class Konkordans{
 			// get the start- and stop-indexes to be searched
 			in = app.getRange(firstThreeIndex, args[0]);	
 			// create LinkedList for the word positions
-			LinkedList<Long> x = app.findWordPositions(args[0], wordAndIndexFile, onlyIndexFile, in);
+			LinkedList<Long> x = app.findWordPositions(args[0], wordAndIndexFile, onlyIndexFile, in, korpus);
 			// Print number of words in text
-			System.out.println("Det finns "+ x.size() + " förekomster av ordet.");
+			//System.out.println("Det finns "+ x.size() + " förekomster av ordet.");
 			// if the number of words in the text is more than 25, ask the user 
 			// if the word in the sentence should be printed.
-			if(x.size()>25){
+			/*if(x.size()>25){
 				if(app.askUser("Vill du skriva ut alla förekomster? \nJ(Ja) or N(Nej)")){
 					app.writeSentences(x, korpus, args[0].length());
 				}
@@ -54,7 +55,7 @@ public class Konkordans{
 			// print the word with sentence
 			else if (x.size()> 0){
 				app.writeSentences(x, korpus, args[0].length());
-			}
+			}*/
 		};
 		
 	};
@@ -63,7 +64,7 @@ public class Konkordans{
 	* numbers as the range in which look for the word
 	* Returns: a LinkedList of all the positions where the word exists stored as long numbers
 	*/
-	public LinkedList<Long> findWordPositions(String word, String wordAndIndexFile, String onlyIndexFile, long[] in){
+	public LinkedList<Long> findWordPositions(String word, String wordAndIndexFile, String onlyIndexFile, long[] in, String korpus){
 		// Create local varibles
 		int i = (int)in[0];
 		int j = (int)in[1];
@@ -125,19 +126,38 @@ public class Konkordans{
 					String t = readerB.readLine();
 					// split t at space
 					String[] party = t.split(" ");
+					
+					Long numberOfIndexes = Long.parseLong(party[0]);
+					
 					Long lon;
-
-					for(int y = 0; y<party.length; y++){
-						lon = Long.parseLong(party[y]);
-						x.addFirst(lon);
+					
+					System.out.println("Det finns "+ numberOfIndexes + " förekomster av ordet.");
+					if(numberOfIndexes<=25){
+						for(int y = 1; y<party.length; y++){
+							lon = Long.parseLong(party[y]);
+							x.addFirst(lon);
+							writeSentences(x, korpus, word.length());
+						}
 					}
+					else{
+						if(askUser("Vill du skriva ut alla förekomster? \nJ(Ja) or N(Nej)")){
+							for(int y = 1; y<party.length; y++){
+								lon = Long.parseLong(party[y]);
+								x.addFirst(lon);
+							}
+							writeSentences(x, korpus, word.length());
+							
+						}
+					}
+
+					
 					// close readers
 					readerA.close();
 					readerB.close();
 					return x;
 				}if(s.compareTo(word)>0){
 					// close readers
-					readerB.close();
+					readerA.close();
 					readerB.close();
 					return x;
 				}
@@ -200,17 +220,50 @@ public class Konkordans{
 			RandomAccessFile reader = new RandomAccessFile(tokenizerOutput, "r");
 			String line = null;
 			String[] parts;
+			String currentWord = "";
+			String oldWord = "";
+			String word = "";
 			long pointer = reader.getFilePointer();
+			long numberOfIndexes = 0;
+			LinkedList<Long> currentIndexList = null;
     			while ((line = reader.readLine()) != null) {
+        			
+        			oldWord = word;
+        			
         			parts = line.split(" ");
-        			String word = parts[0];
-     				if(indexList.containsKey(word)){
+        			word = parts[0];
+        			
+        			/*System.out.println("\nCurrent word = " + currentWord);
+        			System.out.println("\nWord = " + word);
+        			System.out.println("\nNumber of indexes = " + numberOfIndexes);*/
+        			
+     				/*if(indexList.containsKey(word)){
      					indexList.get(word).addLast(Long.parseLong(parts[1]));
      				}
      				else{
      					LinkedList<Long> list = new LinkedList<Long>();
      					list.addFirst(Long.parseLong(parts[1]));
       					indexList.put(word, list);
+     				}*/
+        			
+        			if(word.equals(currentWord)){
+     					currentIndexList.addLast(Long.parseLong(parts[1]));
+     					numberOfIndexes++;
+     				} //If this is the first time we encounter this word:
+     				else{
+     					//Add the old word and indexes to the map
+     					if (!oldWord.isEmpty()){
+     						currentIndexList.addLast(numberOfIndexes);
+     						indexList.put(oldWord, currentIndexList);
+     						//System.out.println("\n added word = " + oldWord + " number of Indexes = " + numberOfIndexes);
+     					}
+     					
+     					//Begin the new word and indexList				
+     					currentIndexList = new LinkedList<Long>();
+     					currentWord = word;
+     					numberOfIndexes=1;
+     					currentIndexList.addLast(Long.parseLong(parts[1]));
+     					
      				}
     			};
     		reader.close();
@@ -277,11 +330,13 @@ public class Konkordans{
 				indexList = index.get(key).descendingIterator();
 				// get fileposition in the onlyindexes file
 				pointerToB = writerTwo.getFilePointer();
+
 				// while there are indexes left in the list
 				while(indexList.hasNext()){
 					// write the index to the onlyindexfile with a space
 					writerTwo.writeBytes(indexList.next() + " ");
 				}
+				
 				// end writing with a newline
 				writerTwo.writeBytes("\n");
 				// set pointerToA as the position in the A-file
@@ -322,17 +377,17 @@ public class Konkordans{
 	public Hashtable<String, Long> readIndexFromFile(String file){
 		Hashtable<String, Long> index = new Hashtable<String, Long>();
 		String line = null;
-		String[] parts = {" ", " "};
-		long l;
-		String s = "";
+		String[] parts = {" ", " ", " "};
+		long pointer;
+		String word = "";
 		try{
 			RandomAccessFile reader = new RandomAccessFile(file, "r");
 			while ((line = reader.readLine()) != null) {
         		parts = line.split(" ");
         		if(parts.length == 2){
-       				s = parts[0];
-       				l = Long.parseLong(parts[1]);
-       				index.put(s, l);
+       				word = parts[0];
+       				pointer = Long.parseLong(parts[1]);
+       				index.put(word, pointer);
        			}	
 			}
 		reader.close();
