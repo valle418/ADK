@@ -10,73 +10,222 @@ import java.util.*;
 import java.io.*;
 public class Konkordans{
 	
+	// The files used:
+	public static final String TOKENIZER_OUTPUT = "ut.txt";
+	public static final String WORDLIST = "WordListFile.txt";
+	public static final String INDEXLIST = "indexListFile.txt";
+	public static final String AINDEX = "aIndex.txt";
+	public static final String KORPUS = "korpus.txt";
+	
+	//The A-Index represented as datastructure:
+	Hashtable<String, Long> aIndexMap = new Hashtable<String, Long>();
+	
 	public static void main(String[] args) {
+		
 		// Initiating konkordans object
 		Konkordans app = new Konkordans();
-		// The files used
-		String tokenizerOutput = "ut.txt";
-		String wordAndIndexFile = "aIndex.txt";
-		String onlyIndexFile = "bIndex.txt";
-		String firstThreeIndexFile = "massaIndex.txt";
-		String korpus = "korpus";
 		
-
-		// create a hashtable for the a-index
-		TreeMap<String, LinkedList<Long>> indexList = new TreeMap<String, LinkedList<Long>>();
-		Hashtable<String, Long> firstThreeIndex = new Hashtable<String, Long>();
-		// if the index has previously been written to a file, create a hashtable from it
-		if(new File(wordAndIndexFile).isFile()){	
-			firstThreeIndex = app.readIndexFromFile(firstThreeIndexFile);
-		// if not, create the index and save it to the file wordAndIndexFile
-		}else{
-			indexList = app.createIndex(tokenizerOutput);
-			firstThreeIndex = app.indexToFile(indexList, wordAndIndexFile, onlyIndexFile);
-			app.firstThreeIndexToFile(firstThreeIndex, firstThreeIndexFile);
+		// Check if the files already exist
+		if(new File(AINDEX).isFile()){
+			app.aIndexMap = app.readIndexFromFile();
 		}
-		// initilize a list to contain where to start and stop the to be search
-		long[] in = {0,0};
-		// If the user has provided a word to be searched, get it
+			
+		// if not, create the index and save it to the file wordAndIndexFile
+		else{
+			//Create the aIndex, wordList and indexList from tokenizerOutput
+			app.createTheData();
+			
+		}
 		if(args.length>0){
 			args[0] = args[0].toLowerCase();
-			// get the start- and stop-indexes to be searched
-			in = app.getRange(firstThreeIndex, args[0]);	
-			// create LinkedList for the word positions
-			LinkedList<Long> x = app.findWordPositions(args[0], wordAndIndexFile, onlyIndexFile, in, korpus);
-			// Print number of words in text
-			//System.out.println("Det finns "+ x.size() + " förekomster av ordet.");
-			// if the number of words in the text is more than 25, ask the user 
-			// if the word in the sentence should be printed.
-			/*if(x.size()>25){
-				if(app.askUser("Vill du skriva ut alla förekomster? \nJ(Ja) or N(Nej)")){
-					app.writeSentences(x, korpus, args[0].length());
-				}
-			}
-			// if the number of words in the text is less than 25, but more than 0
-			// print the word with sentence
-			else if (x.size()> 0){
-				app.writeSentences(x, korpus, args[0].length());
-			}*/
-		};
+			app.getRange(app.aIndexMap, args[0]);
+		}
+
+	
+	}
+	
+public void createTheData(){
+		String next = "";
+		String currentWord="";
+		String oldWord = "";
+		String word = "";
+		String currentLine="";
+		String currentLetters="";
+		String oldLetters="";
+		String letters="";
+		String[] currentLineSplit;
+		long pointerToIndexList;
+		long pointerToWordList;
+		long numberOfIndexes = 0;
+		String index = "";
+		LinkedList<String> currentIndexList = new LinkedList<String>();
+		Hashtable<String, Long> aIndexMap = new Hashtable<String, Long>();
 		
+		try {
+			
+			RandomAccessFile reader = new RandomAccessFile(TOKENIZER_OUTPUT, "r");
+			RandomAccessFile writerIndexList = new RandomAccessFile(INDEXLIST, "rw");
+			RandomAccessFile writerWordList = new RandomAccessFile(WORDLIST, "rw");
+			RandomAccessFile writerAIndex = new RandomAccessFile(AINDEX, "rw");
+
+			pointerToIndexList = writerIndexList.getFilePointer();
+			pointerToWordList = writerWordList.getFilePointer();
+
+			while ((currentLine = reader.readLine())!= null) {
+			oldWord = word;
+			currentLineSplit = currentLine.split(" ");
+			word = currentLineSplit[0];
+			index = currentLineSplit[1];
+
+
+			if(word.equals(currentWord)||currentWord.isEmpty()){
+			  		writerIndexList.writeBytes(index + " ");
+					numberOfIndexes++;
+			} 
+			  
+			  //If this is a new word:
+				
+			else{
+					//Write the old word and indexes to all the lists
+					if (!oldWord.isEmpty()){ //Wont run if this is the first word
+						
+						//Write oldWord and pointerA to Wordlistfile:
+						writerWordList.writeBytes(oldWord + " " + pointerToIndexList + " " + numberOfIndexes + "\n" );
+						writerIndexList.writeBytes("\n");
+						pointerToIndexList = writerIndexList.getFilePointer();
+						writerIndexList.writeBytes(index + " ");
+						pointerToWordList = writerWordList.getFilePointer();
+						numberOfIndexes=1;
+					}	
+
+					if (word.length() < 3){
+						letters = word;
+      				}
+      				else{
+      					letters = word.substring(0, 3);
+     				}
+
+					if(!(aIndexMap.containsKey(letters))){
+     					aIndexMap.put(letters, pointerToWordList);
+     					writerAIndex.writeBytes(letters + " " + pointerToWordList + "\n");
+     				}			
+			}
+					
+			//Begin the new word and indexList				
+			currentWord = word;
+					
+			}
+			reader.close();
+			writerWordList.close();
+			writerIndexList.close();
+			writerAIndex.close();
+			
+			
+		} catch (IOException x) {
+			System.err.println(x);
+		}
+	}
+
+
+	/**
+	* Gets an index from an existing file by reading each line, splitting it into keyword and
+	* index and saves each set in a hashtable which is returned.
+	*
+	* @param file
+	* The file that is storing the keywords and indexes
+	* @return the input file as a hashtable with keywords and indexes
+	*/
+	public Hashtable<String, Long> readIndexFromFile(){
+		Hashtable<String, Long> index = new Hashtable<String, Long>();
+		String line = null;
+		String[] parts = {" ", " ", " "};
+		long pointer;
+		String word = "";
+		try{
+			RandomAccessFile reader = new RandomAccessFile(AINDEX, "r");
+			while ((line = reader.readLine()) != null) {
+        		parts = line.split(" ");
+        		if(parts.length == 2){
+       				word = parts[0];
+       				pointer = Long.parseLong(parts[1]);
+       				index.put(word, pointer);
+       			}	
+			}
+		reader.close();
+		}catch(IOException x){
+			System.err.println(x);
+		}
+		return index;
 	};
+
+	public void getRange(Hashtable<String, Long> aIndex, String word){
+		long[] in = {0,0};
+		String subWord = word;
+		
+		//Get the first 3 letters of the word:
+		if(word.length()> 3){
+			subWord = subWord.substring(0,3);
+		}
+		// Get the index corresponding to the correct 3-letter combination
+		if(aIndex.containsKey(subWord)){
+			in[0] = aIndex.get(subWord);
+			//Use incremented to find the next available 3-letter combination
+			subWord = incremented(subWord);
+			while(!(aIndex.containsKey(subWord))){
+				subWord = incremented(subWord);
+			}
+
+			in[1] = aIndex.get(subWord);
+		}
+		findWordPositions(word, in);
+	};
+
+	/**
+	* Helpmethod for "getRange" used to find the next available 3-letter 
+	* combination.
+	*
+	* @param original
+	* original 3-letter combination
+	* @return next available 3-letter combination
+	*/
+	public String incremented(String original) {
+    	StringBuilder buf = new StringBuilder(original);
+   		int index = buf.length() -1;
+    	while(index >= 0) {
+       		char c = buf.charAt(index);
+       		c++;
+       		buf.setCharAt(index, c);
+       		if(c == 0) { 
+        		index--;
+        		continue;
+    		}
+       		return buf.toString();
+    	}
+    	// overflow at the first "digit", need to add one more digit
+    	buf.insert(0, '\1');
+    	return buf.toString();
+	}
+
+
 	/** Find all the positions of the word that you are looking for from a indexfile
 	* Parameters: word you are looking for, indexfile-name, array with two long 
 	* numbers as the range in which look for the word
 	* Returns: a LinkedList of all the positions where the word exists stored as long numbers
 	*/
-	public LinkedList<Long> findWordPositions(String word, String wordAndIndexFile, String onlyIndexFile, long[] in, String korpus){
+	public LinkedList<Long> findWordPositions(String word, long[] in){
 		// Create local varibles
 		int i = (int)in[0];
 		int j = (int)in[1];
 		int m = 0;
+		long numberOfIndexes = 0;
 		String s;
 		LinkedList<Long> x = new LinkedList<Long>();
 		char c;
 		String parts[];
 		try {
 			// Open tokenizerOutput as randomaccessfile with read access
-			RandomAccessFile readerA = new RandomAccessFile(wordAndIndexFile, "r");
-			RandomAccessFile readerB = new RandomAccessFile(onlyIndexFile, "r");
+			RandomAccessFile readerA = new RandomAccessFile(WORDLIST, "r");
+			RandomAccessFile readerB = new RandomAccessFile(INDEXLIST, "r");
 			// While the range to look in is longer than 1000
 			while ((j-i)>1000){
 				// give m a value in the middle of j and i
@@ -112,44 +261,49 @@ public class Konkordans{
 			// Keep going until you find word, or you find a word which is
 			// greater than the one you are looking for
 			while (true){
+
 				// read line from A-file
 				s = readerA.readLine();
+				System.out.println(s);
 				// splitLine at space
 				parts = s.split(" ");
+				if (!(parts[0].equals(word))){
+					s = readerA.readLine();
+					parts = s.split(" ");
+				}
 				// if the word is the one you are looking for
 				if (parts[0].equals(word)){
-					// set pointer as second element in list
-					long pointer = Long.parseLong(parts[1]);
-					// set readerB to the position given by pointer
-					readerB.seek(pointer);
-					// set string t as the value at line in file
-					String t = readerB.readLine();
-					// split t at space
-					String[] party = t.split(" ");
 					
-					Long numberOfIndexes = Long.parseLong(party[0]);
 					
-					Long lon;
-					
-					System.out.println("Det finns "+ numberOfIndexes + " förekomster av ordet.");
-					if(numberOfIndexes<=25){
-						for(int y = 1; y<party.length; y++){
-							lon = Long.parseLong(party[y]);
-							x.addFirst(lon);
-							writeSentences(x, korpus, word.length());
-						}
+					System.out.println("Det finns "+ parts[2] + " förekomster av ordet.");
+					if(Long.parseLong(parts[2])<=25){
+						// set pointer as second element in list
+						long pointer = Long.parseLong(parts[1]);
+						// set readerB to the position given by pointer
+						readerB.seek(pointer);
+						System.out.println(pointer);
+						// set string t as the value at line in file
+						String t = readerB.readLine();
+						System.out.println(t);
+						// split t at space
+						String[] wordPositions = t.split(" ");
+						writeSentences(wordPositions, word.length());
 					}
 					else{
+						
 						if(askUser("Vill du skriva ut alla förekomster? \nJ(Ja) or N(Nej)")){
-							for(int y = 1; y<party.length; y++){
-								lon = Long.parseLong(party[y]);
-								x.addFirst(lon);
-							}
-							writeSentences(x, korpus, word.length());
-							
+							// set pointer as second element in list
+							long pointer = Long.parseLong(parts[1]);
+							// set readerB to the position given by pointer
+							readerB.seek(pointer);
+							// set string t as the value at line in file
+							String t = readerB.readLine();
+							System.out.println(t);
+							// split t at space
+							String[] wordPositions = t.split(" ");
+							writeSentences(wordPositions, word.length());
 						}
 					}
-
 					
 					// close readers
 					readerA.close();
@@ -168,234 +322,6 @@ public class Konkordans{
 		return x;
 	}
 
-	/**
-	* Uses the A-index to find the first and last index in the tokenizerOutput file 
-	* that the program will search to find the given word.
-	* Uses the method "incremented" to get the next available 3-letter combination and
-	* uses that value to get the index where to stop the search.
-	*
-	* @param aIndex
-	* the hashtable containing the A-index
-	* @param word 
-	* the word we are getting the range for
-	* @return the range as a list of 2 longs containing start- and stop-index
-	*/
-	public long[] getRange(Hashtable<String, Long> firstThreeIndex, String word){
-		long[] in = {0,0};
-		
-		//Get the first 3 letters of the word:
-		if(word.length()> 3){
-			word = word.substring(0,3);
-		}
-		// Get the index corresponding to the correct 3-letter combination
-		if(firstThreeIndex.containsKey(word)){
-			in[0] = firstThreeIndex.get(word);
-			//Use incremented to find the next available 3-letter combination
-			word = incremented(word);
-			while(!(firstThreeIndex.containsKey(word))){
-				word = incremented(word);
-			}
-			in[1] = firstThreeIndex.get(word);
-			return in;
-		}
-		return in;
-
-	};
-
-
-	/**
-	* Method used to create an A-index which contains 3-letter combinations and an
-	* index to the first word begining with each combination. 
-	*
-	* @param file
-	* A file containing on each row, a keyword (and an index but we will not use this
-	* index here). 
-	* @param aIndex
-	* A hashtable containing each 3-letter (or fewer) combination exsisting in the file 
-	* and an index to where in the input-file the first word begining with it is. 
-	*/
-	public TreeMap<String, LinkedList<Long>> createIndex(String tokenizerOutput){
-		TreeMap<String, LinkedList<Long>> indexList = new TreeMap<String, LinkedList<Long>>();
-		try {
-			RandomAccessFile reader = new RandomAccessFile(tokenizerOutput, "r");
-			String line = null;
-			String[] parts;
-			String currentWord = "";
-			String oldWord = "";
-			String word = "";
-			long pointer = reader.getFilePointer();
-			long numberOfIndexes = 0;
-			LinkedList<Long> currentIndexList = null;
-    			while ((line = reader.readLine()) != null) {
-        			
-        			oldWord = word;
-        			
-        			parts = line.split(" ");
-        			word = parts[0];
-        			
-        			/*System.out.println("\nCurrent word = " + currentWord);
-        			System.out.println("\nWord = " + word);
-        			System.out.println("\nNumber of indexes = " + numberOfIndexes);*/
-        			
-     				/*if(indexList.containsKey(word)){
-     					indexList.get(word).addLast(Long.parseLong(parts[1]));
-     				}
-     				else{
-     					LinkedList<Long> list = new LinkedList<Long>();
-     					list.addFirst(Long.parseLong(parts[1]));
-      					indexList.put(word, list);
-     				}*/
-        			
-        			if(word.equals(currentWord)){
-     					currentIndexList.addLast(Long.parseLong(parts[1]));
-     					numberOfIndexes++;
-     				} //If this is the first time we encounter this word:
-     				else{
-     					//Add the old word and indexes to the map
-     					if (!oldWord.isEmpty()){
-     						currentIndexList.addLast(numberOfIndexes);
-     						indexList.put(oldWord, currentIndexList);
-     						//System.out.println("\n added word = " + oldWord + " number of Indexes = " + numberOfIndexes);
-     					}
-     					
-     					//Begin the new word and indexList				
-     					currentIndexList = new LinkedList<Long>();
-     					currentWord = word;
-     					numberOfIndexes=1;
-     					currentIndexList.addLast(Long.parseLong(parts[1]));
-     					
-     				}
-    			};
-    		reader.close();
-		} catch (IOException x) {
-    	System.err.println(x);
-		}
-		return indexList;
-	}
-
-	/**
-	* Helpmethod for "getRange" used to find the next available 3-letter 
-	* combination.
-	*
-	* @param original
-	* original 3-letter combination
-	* @return next available 3-letter combination
-	*/
-	public String incremented(String original) {
-    	StringBuilder buf = new StringBuilder(original);
-   		int index = buf.length() -1;
-    	while(index >= 0) {
-       		char c = buf.charAt(index);
-       		c++;
-       		buf.setCharAt(index, c);
-       		if(c == 0) { 
-        		index--;
-        		continue;
-    		}
-       		return buf.toString();
-    	}
-    	// overflow at the first "digit", need to add one more digit
-    	buf.insert(0, '\1');
-    	return buf.toString();
-	}
-
-	/**
-	* Writes a hastable to a file
-	*
-	* @param index
-	* hashtable we wish to write to a file
-	* @param file
-	* file we wish to write to
-	*/
-	public Hashtable<String, Long> indexToFile(TreeMap<String, LinkedList<Long>> index, String wordAndIndexFile, String onlyIndexfile){
-		// An iterator over all the keys, all the words, in the treemap.
-		Iterator<String> keys = index.descendingKeySet().descendingIterator();
-		// A hashtable for the word and the position of that word's indexes in an other file.  
-		Hashtable<String, Long> firstThreeIndex = new Hashtable<String, Long>();
-		
-		Iterator<Long> indexList;;
-		String key;
-		String sub;
-		Long pointerToB;
-		Long pointerToA;
-		try{
-			// Two writers for two files
-			RandomAccessFile writerOne = new RandomAccessFile(wordAndIndexFile, "rw");
-			RandomAccessFile writerTwo = new RandomAccessFile(onlyIndexfile, "rw");
-			// While there are more words in the treemap
-			while (keys.hasNext()){
-				// set key variable to next element in the iterator
-				key = keys.next();
-				// // Iterator over all indexes for the word in key
-				indexList = index.get(key).descendingIterator();
-				// get fileposition in the onlyindexes file
-				pointerToB = writerTwo.getFilePointer();
-
-				// while there are indexes left in the list
-				while(indexList.hasNext()){
-					// write the index to the onlyindexfile with a space
-					writerTwo.writeBytes(indexList.next() + " ");
-				}
-				
-				// end writing with a newline
-				writerTwo.writeBytes("\n");
-				// set pointerToA as the position in the A-file
-				pointerToA = writerOne.getFilePointer();
-				// Write the word, space and pointerToB to wordAndIndexFile
-				writerOne.writeBytes(key + " " + pointerToB +  "\n");
-				// if the length of the word is less than 3
-				if (key.length() < 3){
-					// set the string sub to the word
-        			sub = key;
-        		// if the length of the word is 3 or more
-        		}else{
-        			// set sub to the first three letters ín the word
-  	     			sub = key.substring(0, 3);
-       			}
-       			// if the firstThreeIndex already contains sub, continue
-       			if (!(firstThreeIndex.containsKey(sub))){
-       				firstThreeIndex.put(sub, pointerToA);
-				}
-			}
-		writerOne.close();
-		writerTwo.close();
-		return firstThreeIndex;
-		}catch(IOException x){ 
-			System.err.println(x);
-		}
-		return firstThreeIndex;
-	}
-
-	/**
-	* Gets an index from an existing file by reading each line, splitting it into keyword and
-	* index and saves each set in a hashtable which is returned.
-	*
-	* @param file
-	* The file that is storing the keywords and indexes
-	* @return the input file as a hashtable with keywords and indexes
-	*/
-	public Hashtable<String, Long> readIndexFromFile(String file){
-		Hashtable<String, Long> index = new Hashtable<String, Long>();
-		String line = null;
-		String[] parts = {" ", " ", " "};
-		long pointer;
-		String word = "";
-		try{
-			RandomAccessFile reader = new RandomAccessFile(file, "r");
-			while ((line = reader.readLine()) != null) {
-        		parts = line.split(" ");
-        		if(parts.length == 2){
-       				word = parts[0];
-       				pointer = Long.parseLong(parts[1]);
-       				index.put(word, pointer);
-       			}	
-			}
-		reader.close();
-		}catch(IOException x){
-			System.err.println(x);
-		}
-		return index;
-	}
 
 	/**
 	* For each index in the linked list this method prints out the 30 chars
@@ -407,14 +333,14 @@ public class Konkordans{
 	* lenght to be added to the trail of characters behind the word so that it really
 	* prints the word + 30 chars
 	*/
-	public void writeSentences(LinkedList<Long> list, String file, int wordLength){
+	public void writeSentences(String[] wordPositions, int wordLength){
+		System.out.println("writing Sentences");
 		byte[] b = new byte[(60 + wordLength)];
-		int size = list.size();
 		long l;
 		try{
-			RandomAccessFile reader = new RandomAccessFile(file, "r");
-			for(int j = 0; j<size; j++){
-				l= list.removeLast();
+			RandomAccessFile reader = new RandomAccessFile(KORPUS, "r");
+			for(int j = 0; j<wordPositions.length; j++){
+				l = Long.parseLong(wordPositions[j]);
 				reader.seek((l-30));
 				for(int i = 0; i < (wordLength+60); i++){
 					b[i]= reader.readByte();
@@ -452,18 +378,4 @@ public class Konkordans{
 		}
 	}
 
-	public void firstThreeIndexToFile(Hashtable<String, Long>index, String file){
-		Enumeration<String> keys = index.keys();
-		try{
-			RandomAccessFile writer = new RandomAccessFile(file, "rw");
-			while (keys.hasMoreElements()){
-				String key = keys.nextElement();
-				writer.writeBytes(key + " " + index.get(key)+ "\n");
-			}
-		writer.close();
-		}catch(IOException x){
-			System.err.println(x);
-		}
-	}
-	
 }
