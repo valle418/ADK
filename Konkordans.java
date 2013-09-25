@@ -18,7 +18,7 @@ public class Konkordans{
 	public static final String KORPUS = "korpus.txt";
 	
 	//The A-Index represented as datastructure:
-	Hashtable<String, Long> aIndexMap = new Hashtable<String, Long>();
+	public Hashtable<String, Long> aIndexMap = new Hashtable<String, Long>();
 	
 	public static void main(String[] args) {
 		
@@ -45,21 +45,16 @@ public class Konkordans{
 	}
 	
 public void createTheData(){
-		String next = "";
 		String currentWord="";
 		String oldWord = "";
 		String word = "";
 		String currentLine="";
-		String currentLetters="";
-		String oldLetters="";
 		String letters="";
 		String[] currentLineSplit;
 		long pointerToIndexList;
 		long pointerToWordList;
 		long numberOfIndexes = 0;
 		String index = "";
-		LinkedList<String> currentIndexList = new LinkedList<String>();
-		Hashtable<String, Long> aIndexMap = new Hashtable<String, Long>();
 		
 		try {
 			
