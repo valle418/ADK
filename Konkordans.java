@@ -56,7 +56,6 @@ public void createTheData(){
 		long numberOfIndexes = 0;
 		String index = "";
 		int i =0;
-		int j = 0;
 		LinkedList<String> temporaryLines = new LinkedList<String>();
 		LinkedList<String> linesForWordFile = new LinkedList<String>();
 		
@@ -70,64 +69,59 @@ public void createTheData(){
 			pointerToIndexList = writerIndexList.getFilePointer();
 			pointerToWordList = writerWordList.getFilePointer();
 
-			while ((currentLine = reader.readLine())!= null){
-				temporaryLines.addLast(currentLine);
+			
+			for (int j = 0;j < 1260; j++) {
+				System.out.println(i*j);
 				i = 0;
-				while(((currentLine = reader.readLine())!= null) && (i < 100000)){
-					temporaryLines.addLast(currentLine);
+				while(((currentLine = reader.readLine())!= null) && (i < 10000)){
 					i++;
-				}
-				j++;
-				i = 0;
-			while(temporaryLines.peekFirst() != null){
-				oldWord = word;
-				currentLine = temporaryLines.pollFirst();
-				currentLineSplit = currentLine.split(" ");
-				word = currentLineSplit[0];
-				index = currentLineSplit[1];
+					oldWord = word;
+					currentLineSplit = currentLine.split(" ");
+					word = currentLineSplit[0];
+					index = currentLineSplit[1];
 
 
-				if(word.equals(currentWord)||currentWord.isEmpty()){
-			  		writerIndexList.writeBytes(index + " ");
-					numberOfIndexes++;
-				} 
+					if(word.equals(currentWord)||currentWord.isEmpty()){
+				  		writerIndexList.writeBytes(index + " ");
+						numberOfIndexes++;
+					} 
 			  
-			  //If this is a new word:
+				  //If this is a new word:
 				
-			else{
-					//Write the old word and indexes to all the lists
-					if (!oldWord.isEmpty()){ //Wont run if this is the first word
+					else{
+						//Write the old word and indexes to all the lists
+						if (!oldWord.isEmpty()){ //Wont run if this is the first word
 						
-						//Write oldWord and pointerA to Wordlistfile:
-						linesForWordFile.addLast(oldWord + " " + pointerToIndexList + " " + numberOfIndexes + "\n");
-						writerIndexList.writeBytes("\n");
-						pointerToIndexList = writerIndexList.getFilePointer();
-						writerIndexList.writeBytes(index + " ");
-						pointerToWordList = writerWordList.getFilePointer();
-						numberOfIndexes=1;
-					}	
+							//Write oldWord and pointerA to Wordlistfile:
+							linesForWordFile.addLast(oldWord + " " + pointerToIndexList + " " + numberOfIndexes + "\n");
+							writerIndexList.writeBytes("\n");
+							pointerToIndexList = writerIndexList.getFilePointer();
+							writerIndexList.writeBytes(index + " ");
+							pointerToWordList = writerWordList.getFilePointer();
+							numberOfIndexes=1;
+						}	
 
-					if (word.length() < 3){
-						letters = word;
-      				}
-      				else{
-      					letters = word.substring(0, 3);
-     				}
+						if (word.length() < 3){
+							letters = word;
+      					}
+      					else{
+      						letters = word.substring(0, 3);
+     					}
 
-					if(!(aIndexMap.containsKey(letters))){
-     					aIndexMap.put(letters, pointerToWordList);
-     				}			
-			}
+						if(!(aIndexMap.containsKey(letters))){
+    	 					aIndexMap.put(letters, pointerToWordList);
+     					}			
+					}
 					
-			//Begin the new word and indexList				
-			currentWord = word;
+					//Begin the new word and indexList				
+					currentWord = word;
 
-			}
-			temporaryLines.clear();
-			while(linesForWordFile.peekFirst() != null){
-				writerWordList.writeBytes(linesForWordFile.pollFirst());
-			}
-			linesForWordFile.clear();
+				}
+				temporaryLines.clear();
+				while(linesForWordFile.peekFirst() != null){
+					writerWordList.writeBytes(linesForWordFile.pollFirst());
+				}
+				linesForWordFile.clear();
 
 			}
 			System.out.println("Writing to aIndex");
